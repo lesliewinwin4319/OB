@@ -1,0 +1,26 @@
+# ===== 后端 =====
+ob-server/.env
+ob-server/node_modules/
+ob-server/dist/
+
+# ===== iOS =====
+OB/DerivedData/
+OB/*.xcworkspace/xcuserdata/
+OB/**/*.xcuserstate
+OB/Pods/
+
+# ===== macOS =====
+.DS_Store
+**/.DS_Store
+
+# ===== Obsidian =====
+.obsidian/
+OB 项目文档/.obsidian/
+
+# ===== 临时文件 =====
+.tmp.driveupload/
+*.tmp
+
+# ===== 日志 =====
+*.log
+npm-debug.log*
