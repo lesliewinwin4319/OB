@@ -43,7 +43,7 @@ final class OBAPIClient {
 
     // 本地开发用 localhost；正式上线后改为生产域名
     #if DEBUG
-    private let baseURL = "http://localhost:3000"
+    private let baseURL = "http://192.168.1.84:3000"
     #else
     private let baseURL = "https://api.ob.app"
     #endif
