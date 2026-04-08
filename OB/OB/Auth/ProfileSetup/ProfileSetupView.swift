@@ -68,6 +68,9 @@ struct ProfileSetupView: View {
     /// 键盘焦点控制：页面进入时自动拉起键盘
     @FocusState private var isNicknameFieldFocused: Bool
 
+    /// submit 成功后的导航回调，由父级 AuthFlowView 传入；Preview 不传时默认 nil
+    var onProfileCompleted: (() -> Void)? = nil
+
     var body: some View {
         ZStack {
             // 背景色与登录页保持一致
@@ -230,6 +233,8 @@ struct ProfileSetupView: View {
                     nickname: viewModel.nickname,
                     avatarWxUrl: authManager.wechatUserInfo?.avatarURL
                 )
+                // submit 成功后由闭包触发导航，不在这里改 authManager 状态
+                onProfileCompleted?()
             } catch let error as APIError {
                 viewModel.errorMessage = error.message
             } catch {

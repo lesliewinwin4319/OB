@@ -24,7 +24,10 @@ struct FriendGuideView: View {
 
     // TODO: 待产品确认 — 好友申请列表由服务端接口提供，当前为空态占位
     // 接口：GET /friend/requests  返回 FriendRequest 数组
-    @State private var friendRequests: [FriendRequest] = []
+    @State private var friendRequests: [FriendRequest] = [
+        FriendRequest(id: "mock_1", avatarURL: nil, nickname: "杰哥"),
+        FriendRequest(id: "mock_2", avatarURL: nil, nickname: "杰哥")
+    ]
 
     var body: some View {
         ZStack {

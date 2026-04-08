@@ -188,6 +188,6 @@ final class AuthStateManager: ObservableObject {
             avatarWxUrl: avatarWxUrl,
             token: token
         )
-        transition(to: .active)
+        // 不在这里 transition，由调用方（ProfileSetupView）负责后续导航
     }
 }

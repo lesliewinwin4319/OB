@@ -94,75 +94,21 @@ struct AuthFlowView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ProfileSetupView()
-                .environmentObject(authManager)
-                .navigationDestination(for: String.self) { destination in
-                    if destination == "friendGuide" {
-                        FriendGuideView()
-                            .environmentObject(authManager)
-                    }
-                }
-        }
-        .onChange(of: authManager.registrationStep) { _, newStep in
-            // 资料填写完成（服务端确认后）自动推入好友引导页
-            // 注意：此处监听状态变化来驱动导航，避免在 ProfileSetupView 内直接 push
-            // TODO: 待产品确认 — 资料提交成功后的导航时机是否需要调整
-            // 当前逻辑：status 变为 active 时先推好友引导页，好友引导页再进首页
-            if newStep == .active && navigationPath.isEmpty {
+            ProfileSetupView(onProfileCompleted: {
                 navigationPath.append("friendGuide")
-                // 同时将状态临时回退为 pendingProfile，防止 RootView 直接跳首页
-                // 真正进首页的时机在 FriendGuideView 的"进入 OB"按钮
-                // TODO: 待产品确认 — 此处状态流转逻辑需与后端对齐
-                //
-                // 注意：这里有一个设计权衡点：
-                // 方案 A（当前）：status 在提交资料时即改为 ACTIVE，好友引导页不阻塞进首页
-                // 方案 B：引入中间状态 PENDING_FRIEND，好友引导页完成后才改为 ACTIVE
-                // 推荐方案 B，但需等服务端确认
-            }
-        }
-    }
-}
-
-// MARK: - HomeView（占位）
-
-/// 首页占位视图，待正式首页模块实现后替换
-struct HomeView: View {
-    @EnvironmentObject var authManager: AuthStateManager
-
-    var body: some View {
-        ZStack {
-            Color(hex: "#F5E8DD").opacity(0.3).ignoresSafeArea()
-            VStack(spacing: 20) {
-                Text("🎉 欢迎来到 OB")
-                    .font(.system(size: 24, weight: .bold))
-                // TODO: 替换为正式首页内容
-                Text("首页开发中")
-                    .foregroundStyle(.secondary)
-
-                Button("退出登录（测试用）") {
-                    authManager.logout()
+            })
+            .environmentObject(authManager)
+            .navigationDestination(for: String.self) { destination in
+                if destination == "friendGuide" {
+                    FriendGuideView()
+                        .environmentObject(authManager)
                 }
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
             }
         }
-        .navigationBarBackButtonHidden(true)
     }
 }
 
-// MARK: - App 入口
-
-/// 将 RootView 接入 App 入口（实际项目在 OBApp.swift 中配置，这里仅供参考）
-/*
-@main
-struct OBApp: App {
-    var body: some Scene {
-        WindowGroup {
-            RootView()
-        }
-    }
-}
-*/
+// MARK: - HomeView 已迁移至 Home/HomeView.swift
 
 // MARK: - Preview
 
