@@ -1,7 +1,7 @@
 // CameraManager.swift
-// OB App - 相机管理器：封装 AVCaptureSession 生命周期和权限状态机
+// OB App - 相机管理器：封装 AVCaptureSession 生命周期、权限状态机和拍照能力
 // 作者：Louis（iOS 客户端）
-// 版本：v1.0 · 2026-04-07
+// 版本：v1.1 · 2026-04-08（新增 AVCapturePhotoOutput 拍照能力）
 
 import AVFoundation
 import SwiftUI
@@ -28,6 +28,12 @@ final class CameraManager: ObservableObject {
     @Published var isSessionRunning: Bool = false
     @Published var sessionError: String? = nil
 
+    /// 拍照结果：拍照成功后设置，页面路由后由 HomeView 清理
+    @Published var capturedImage: UIImage? = nil
+
+    /// 快门防抖：拍照中禁止连按
+    @Published var isCapturing: Bool = false
+
     // MARK: 内部持有
 
     /// AVCaptureSession 仅内部使用，外部通过 sessionForPreview 只读访问
@@ -35,6 +41,12 @@ final class CameraManager: ObservableObject {
 
     /// 专用后台队列，避免在主线程启停 session 导致 UI 卡顿
     private let sessionQueue = DispatchQueue(label: "com.ob.camera.session")
+
+    /// 拍照输出
+    private let photoOutput = AVCapturePhotoOutput()
+
+    /// 拍照代理（持有引用防止提前释放）
+    private var photoCaptureDelegate: PhotoCaptureDelegate?
 
     /// 当前使用的摄像设备（后置广角）
     private var currentDevice: AVCaptureDevice?
@@ -169,6 +181,11 @@ final class CameraManager: ObservableObject {
                 return
             }
 
+            // 添加拍照输出
+            if self.captureSession.canAddOutput(self.photoOutput) {
+                self.captureSession.addOutput(self.photoOutput)
+            }
+
             self.captureSession.commitConfiguration()
             self.captureSession.startRunning()
 
@@ -192,6 +209,47 @@ final class CameraManager: ObservableObject {
                 self.isSessionRunning = false
             }
         }
+    }
+
+    // MARK: - Tap-to-Focus
+
+    // MARK: - 拍照
+
+    /// 触发一次拍照，结果通过 capturedImage 发布
+    /// 拍照过程中 isCapturing = true，防止快门连按
+    func capturePhoto() {
+        guard !isCapturing else { return }
+        guard permissionStatus == .authorized else { return }
+
+        isCapturing = true
+
+        let settings = AVCapturePhotoSettings()
+
+        let delegate = PhotoCaptureDelegate { [weak self] image in
+            Task { @MainActor in
+                guard let self else { return }
+                if let image {
+                    self.capturedImage = image
+                    // 异步保存到相册（不阻塞主流程）
+                    PhotoAlbumSaver.save(image)
+                } else {
+                    self.sessionError = "拍照失败，请重试"
+                }
+                self.isCapturing = false
+            }
+        }
+
+        // 持有 delegate 引用，防止回调前被释放
+        photoCaptureDelegate = delegate
+
+        sessionQueue.async { [weak self] in
+            self?.photoOutput.capturePhoto(with: settings, delegate: delegate)
+        }
+    }
+
+    /// 清理拍照结果（Pop to Root 时调用）
+    func clearCapturedImage() {
+        capturedImage = nil
     }
 
     // MARK: - Tap-to-Focus
@@ -220,5 +278,40 @@ final class CameraManager: ObservableObject {
                 // 对焦失败不影响主流程，静默忽略
             }
         }
+    }
+}
+
+// MARK: - PhotoCaptureDelegate
+
+/// AVCapturePhotoCaptureDelegate 实现
+/// 拍照完成后通过闭包回传 UIImage（失败时传 nil）
+final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+
+    private let completion: (UIImage?) -> Void
+
+    init(completion: @escaping (UIImage?) -> Void) {
+        self.completion = completion
+        super.init()
+    }
+
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto photo: AVCapturePhoto,
+        error: Error?
+    ) {
+        if let error {
+            print("[PhotoCaptureDelegate] 拍照失败: \(error.localizedDescription)")
+            completion(nil)
+            return
+        }
+
+        guard let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data)
+        else {
+            completion(nil)
+            return
+        }
+
+        completion(image)
     }
 }

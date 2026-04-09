@@ -9,5 +9,7 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>OB 需要使用摄像头来拍摄照片</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>OB 需要将拍摄的照片保存到相册</string>
 </dict>
 </plist>
