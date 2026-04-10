@@ -30,8 +30,8 @@ struct RootView: View {
                     .environmentObject(authManager)
 
             case .active:
-                // 资料完善：进首页，完全脱离注册流程
-                HomeView()
+                // 资料完善：进主导航，包含相机与朋友圈
+                MainTabView()
                     .environmentObject(authManager)
             }
         }

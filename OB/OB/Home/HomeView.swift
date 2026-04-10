@@ -37,41 +37,19 @@ struct HomeView: View {
                         .ignoresSafeArea()
                 }
 
-                // Layer 2: 顶部导航栏 + 底部按钮区
+                // Layer 2: 仅显示拍照按钮
                 VStack {
-                    // 顶部导航栏
-                    TopNavigationBar { tabName in
-                        ToastManager.shared.show("功能开发中，敬请期待")
-                    }
-                    .padding(.top, 8)
-
                     Spacer()
 
-                    // 底部区域：拍照按钮 + 朋友圈入口
-                    VStack(spacing: 20) {
-                        // 拍照按钮
-                        CaptureButton(
-                            isEnabled: cameraManager.permissionStatus == .authorized,
-                            isCapturing: cameraManager.isCapturing,
-                            onCapture: {
-                                cameraManager.capturePhoto()
-                            }
-                        )
-
-                        // 底部「朋友圈」入口
-                        Button(action: {
-                            ToastManager.shared.show("功能开发中，敬请期待")
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "circle.grid.2x2.fill")
-                                    .font(.system(size: 16))
-                                Text("朋友圈")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundStyle(.white.opacity(0.8))
+                    // 底部区域：仅拍照按钮
+                    CaptureButton(
+                        isEnabled: cameraManager.permissionStatus == .authorized,
+                        isCapturing: cameraManager.isCapturing,
+                        onCapture: {
+                            cameraManager.capturePhoto()
                         }
-                        .padding(.bottom, 16)
-                    }
+                    )
+                    .padding(.bottom, 80) // 为底部的 TabBar 留出空间
                 }
 
                 // Layer 3: 权限拒绝弹窗（denied 且用户未手动关闭时立即弹出）

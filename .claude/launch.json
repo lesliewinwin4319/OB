@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "OB Server (NestJS dev)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:dev"],
+      "port": 3000,
+      "cwd": "/Users/liyudong/Desktop/OB project/ob-server"
+    }
+  ]
+}
