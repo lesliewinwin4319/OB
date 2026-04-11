@@ -54,30 +54,13 @@ struct RootView: View {
 
     // MARK: - 服务端状态同步
 
-    /// App 启动时调用，从服务端拉取最新用户状态
+    /// App 冷启动时调用：验证 Keychain 中的 token 并从服务端同步最新用户状态
+    /// 流程：有 token → GET /api/v1/users/me → 按 status 跳转
+    ///       无 token / 401 → 转登录页
+    ///       网络异常 → 降级使用本地缓存
     private func syncStatusFromServer() {
-        // TODO: 实现服务端状态同步
-        // 接口：GET /user/me（需要带 JWT token in header）
-        // 成功响应体示例：{ "status": "PENDING_PROFILE" | "ACTIVE" }
-        //
-        // 示例调用：
-        //   APIClient.shared.fetchUserStatus { result in
-        //       switch result {
-        //       case .success(let status):
-        //           authManager.syncFromServer(status: status)
-        //       case .failure:
-        //           // 网络异常：保留本地 UserDefaults 缓存状态，Loading → 已知上次状态
-        //           // 若本地无缓存（首次安装），默认为 .login
-        //           if authManager.registrationStep == .unknown {
-        //               authManager.transition(to: .login)
-        //           }
-        //       }
-        //   }
-        //
-        // 当前开发阶段：直接用本地缓存（restore() 已在 AuthStateManager.init() 中调用）
-        // 若本地仍为 .unknown，兜底为 .login
-        if authManager.registrationStep == .unknown {
-            authManager.transition(to: .login)
+        Task {
+            await authManager.verifyTokenOnLaunch()
         }
     }
 }

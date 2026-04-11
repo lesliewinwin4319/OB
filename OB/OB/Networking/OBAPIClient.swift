@@ -10,6 +10,11 @@ import Foundation
 struct LoginResponse: Decodable {
     let accessToken: String
     let user: UserResponse
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "token"
+        case user
+    }
 }
 
 struct UserResponse: Decodable {
@@ -41,12 +46,8 @@ final class OBAPIClient {
 
     static let shared = OBAPIClient()
 
-    // 本地开发用 localhost；正式上线后改为生产域名
-    #if DEBUG
-    private let baseURL = "http://192.168.1.84:3000"
-    #else
-    private let baseURL = "https://api.ob.app"
-    #endif
+    // 生产环境：Railway 部署地址，统一走 /api/v1 前缀
+    private let baseURL = "https://ob-production-8afc.up.railway.app/api/v1"
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default

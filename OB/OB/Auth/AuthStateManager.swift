@@ -43,15 +43,16 @@ final class AuthStateManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
 
-    // MARK: Token 存储
+    // MARK: Token 存储（Keychain）
 
+    /// token 存储于 Keychain，不写入 UserDefaults，防止越权读取
     var accessToken: String? {
-        get { UserDefaults.standard.string(forKey: tokenKey) }
+        get { KeychainHelper.read(key: tokenKey) }
         set {
             if let token = newValue {
-                UserDefaults.standard.set(token, forKey: tokenKey)
+                KeychainHelper.save(key: tokenKey, value: token)
             } else {
-                UserDefaults.standard.removeObject(forKey: tokenKey)
+                KeychainHelper.delete(key: tokenKey)
             }
         }
     }
@@ -141,9 +142,38 @@ final class AuthStateManager: ObservableObject {
         transition(to: .login)
     }
 
+    // MARK: - 冷启动 Token 验证
+
+    /// App 冷启动时调用：从 Keychain 取 token 并向服务端验证有效性
+    /// - 有 token → 调 GET /users/me：成功则按服务端 status 跳转；401 则清 token 回登录页
+    /// - 无 token → 直接转为 .login
+    /// - 网络异常 → 降级使用本地 UserDefaults 缓存 step；若 step 仍为 .unknown 则转 .login
+    func verifyTokenOnLaunch() async {
+        guard let token = accessToken else {
+            // 无 token，首次安装或已退出登录
+            transition(to: .login)
+            return
+        }
+
+        do {
+            let user = try await OBAPIClient.shared.getMe(token: token)
+            syncFromServer(status: user.status)
+        } catch let error as APIError where error.statusCode == 401 {
+            // Token 过期或无效，清除并回登录页
+            accessToken = nil
+            transition(to: .login)
+        } catch {
+            // 网络异常：降级到本地缓存；若缓存也是 unknown 则兜底 .login
+            if registrationStep == .unknown {
+                transition(to: .login)
+            }
+            // 已有缓存 step（active / pendingProfile）时保持不变，让用户进入已知状态
+        }
+    }
+
     // MARK: - 网络请求
 
-    /// Dev 模式：用 mock code 直接调本地后端登录
+    /// Dev 模式：用 mock code 直接调生产后端登录（每次唯一 UUID 避免服务端 code 缓存冲突）
     func loginWithMockCode(_ code: String) async {
         isLoading = true
         errorMessage = nil

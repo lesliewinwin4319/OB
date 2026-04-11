@@ -165,7 +165,7 @@ struct LoginView: View {
     /// 开发阶段模拟无昵称场景（SDK 集成后删除）
     /// 调真实后端，但手动清空昵称模拟无昵称场景
     private func simulateWeChatAuthNoNicknameForDev() {
-        let mockCode = "mock_noname_\(Int.random(in: 100...999))"
+        let mockCode = "ob_dev_\(UUID().uuidString)"
         Task {
             await authManager.loginWithMockCode(mockCode)
             // 登录成功后清空昵称，模拟微信未返回昵称的场景
@@ -243,7 +243,7 @@ struct LoginView: View {
     /// 开发阶段模拟微信授权流程（SDK 集成后删除此方法）
     /// 使用随机 code 调本地后端，走完整注册链路
     private func simulateWeChatAuthForDev() {
-        let mockCode = "mock_user_\(Int.random(in: 100...999))"
+        let mockCode = "ob_dev_\(UUID().uuidString)"
         Task {
             await authManager.loginWithMockCode(mockCode)
         }
