@@ -233,7 +233,8 @@ struct ProfileSetupView: View {
                     nickname: viewModel.nickname,
                     avatarWxUrl: authManager.wechatUserInfo?.avatarURL
                 )
-                // submit 成功后由闭包触发导航，不在这里改 authManager 状态
+                // 持久化 active 状态，防止断网强退后回到填写页
+                authManager.markProfileCompleted()
                 onProfileCompleted?()
             } catch let error as APIError {
                 viewModel.errorMessage = error.message

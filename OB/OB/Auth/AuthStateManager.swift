@@ -65,7 +65,8 @@ final class AuthStateManager: ObservableObject {
     // MARK: Init
 
     init() {
-        restore()
+        // 保持 .unknown，由 verifyTokenOnLaunch() 负责状态转移；
+        // restore() 仅作为网络失败时的降级兜底，在 catch 分支调用。
     }
 
     // MARK: - 持久化
@@ -164,6 +165,7 @@ final class AuthStateManager: ObservableObject {
             transition(to: .login)
         } catch {
             // 网络异常：降级到本地缓存；若缓存也是 unknown 则兜底 .login
+            restore()
             if registrationStep == .unknown {
                 transition(to: .login)
             }

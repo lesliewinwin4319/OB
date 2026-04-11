@@ -145,6 +145,8 @@ struct LoginView: View {
             .background(Color(hex: "#1AAD19"))  // 微信品牌绿
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        // 防止 isLoading 期间重复触发登录请求
+        .disabled(authManager.isLoading)
     }
 
     // MARK: - DEV: 无昵称场景按钮
