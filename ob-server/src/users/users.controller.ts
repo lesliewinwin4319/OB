@@ -14,7 +14,6 @@ import { SkipPendingCheck } from '../auth/guards/pending-profile.guard';
 
 class CompleteProfileDto {
   nickname!: string;
-  avatarWxUrl?: string;
 }
 
 /**
@@ -29,7 +28,7 @@ class CompleteProfileDto {
  *   完善用户资料（昵称 + 头像），触发 PENDING_PROFILE -> ACTIVE 状态转换。
  *
  *   Request Body:
- *     { "nickname": "张三", "avatarWxUrl": "https://wx.qlogo.cn/..." }
+ *     { "nickname": "张三" }
  *
  *   Response 200:
  *     { "uid": "ob_123", "nickname": "张三", "avatarUrl": "...", "status": "ACTIVE", "createdAt": "..." }
@@ -69,7 +68,6 @@ export class UsersController {
 
     const user = await this.usersService.completeProfile(req.user.uid, {
       nickname: body.nickname,
-      avatarWxUrl: body.avatarWxUrl || null,
     });
 
     return this.usersService.toPublicProfile(user);

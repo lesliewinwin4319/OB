@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User, UserStatus } from './entities/user.entity';
 import { SnowflakeService } from '../common/snowflake.service';
-import { AvatarJobService } from '../avatar/avatar-job.service';
 
 export interface UpsertUserParams {
   openid: string;
@@ -18,7 +17,6 @@ export interface UpsertUserParams {
 
 export interface CompleteProfileParams {
   nickname: string;
-  avatarWxUrl?: string | null;
 }
 
 @Injectable()
@@ -29,7 +27,6 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly snowflake: SnowflakeService,
-    private readonly avatarJobService: AvatarJobService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -74,11 +71,14 @@ export class UsersService {
   }
 
   /**
-   * 完善用户资料：昵称 + 头像
+   * 完善用户资料：仅接受昵称
    * PENDING_PROFILE -> ACTIVE 状态转换
+   *
+   * 本期不接收客户端上传头像 URL（微信头像由 iOS 端不传入，头像以字母生成组件展示）。
+   * avatar_wx_url / avatar_cdn_url 字段预留，后续头像功能迭代时使用。
    */
   async completeProfile(uid: string, params: CompleteProfileParams): Promise<User> {
-    const { nickname, avatarWxUrl } = params;
+    const { nickname } = params;
 
     const user = await this.userRepo.findOne({ where: { uid } });
     if (!user) {
@@ -97,22 +97,12 @@ export class UsersService {
       throw new BadRequestException('昵称不能超过 20 个字符');
     }
 
-    // 事务：更新用户状态 + 创建头像处理任务，两步原子完成
-    return this.dataSource.transaction(async (manager) => {
-      user.nickname = nickname.trim();
-      user.avatarWxUrl = avatarWxUrl ?? null;
-      user.status = UserStatus.ACTIVE;
+    user.nickname = nickname.trim();
+    user.status = UserStatus.ACTIVE;
 
-      const updated = await manager.save(User, user);
-
-      // 创建头像异步处理任务（本期只入库，Worker 后续实现）
-      if (avatarWxUrl) {
-        await this.avatarJobService.createJob(uid, avatarWxUrl);
-      }
-
-      this.logger.log(`Profile completed: uid=${uid}`);
-      return updated;
-    });
+    const updated = await this.userRepo.save(user);
+    this.logger.log(`Profile completed: uid=${uid}`);
+    return updated;
   }
 
   /**

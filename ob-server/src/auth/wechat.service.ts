@@ -16,8 +16,8 @@ export interface WechatSessionResult {
  * - 正式环境替换真实 AppID 和 AppSecret 即可，无需改代码
  *
  * Mock 模式规则：
- * - code 以 "mock_" 开头：直接返回 openid=mock_openid_{suffix}
- * - 其他 code：抛出 UnauthorizedException 模拟微信校验失败
+ * - code 非空即通过，直接返回 openid=mock_openid_{code}
+ * - 后续接入真实微信 SDK 时，整体替换 mockCode2Session 方法即可
  */
 @Injectable()
 export class WechatService {
@@ -92,16 +92,11 @@ export class WechatService {
   }
 
   private mockCode2Session(code: string): WechatSessionResult {
-    if (!code.startsWith('mock_')) {
-      throw new UnauthorizedException(
-        '[Mock] 无效的微信 code，mock 模式下 code 须以 mock_ 开头',
-      );
-    }
-
-    const suffix = code.replace('mock_', '');
+    // Mock 模式：code 非空即通过，不区分测试/生产环境
+    // 接入真实微信 SDK 时，整体替换此方法即可，外层逻辑无需修改
     return {
-      openid: `mock_openid_${suffix}`,
-      unionid: `mock_unionid_${suffix}`,
+      openid: `mock_openid_${code}`,
+      unionid: `mock_unionid_${code}`,
     };
   }
 }
