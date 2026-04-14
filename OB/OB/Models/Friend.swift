@@ -11,6 +11,7 @@ import Foundation
 /// 使用 [Friend] 数组管理选中状态，为未来多选预留扩展空间
 struct Friend: Identifiable, Hashable {
     let id: String
+    let uid: String
     let nickname: String
     let avatarColor: String  // hex 颜色，复用 AvatarView 的字母头像
 }

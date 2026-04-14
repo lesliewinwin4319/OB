@@ -64,7 +64,7 @@ struct PhotoConfirmationView: View {
 
                 // 底部：确定按钮
                 Button(action: {
-                    navigationPath.append(PhotoFlowRoute.uploadSelection)
+                    navigationPath.append(PhotoFlowRoute.uploadSelection(hashableImage))
                 }) {
                     Text("确定")
                         .font(.system(size: 17, weight: .semibold))

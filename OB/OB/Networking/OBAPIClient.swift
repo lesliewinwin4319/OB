@@ -32,6 +32,42 @@ struct ProfileResponse: Decodable {
     let avatarUrl: String?
 }
 
+struct MyPostsResponse: Decodable {
+    let pendingList: [PostItem]
+    let approvedList: [PostItem]
+    let pendingCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case pendingList
+        case approvedList
+        case pendingCount
+    }
+}
+
+struct PostItem: Decodable {
+    let id: String
+    let photographerNickname: String
+    let imageUrl: String
+    let createdAt: String
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case photographerNickname
+        case imageUrl
+        case createdAt
+        case status
+    }
+}
+
+struct PendingCountResponse: Decodable {
+    let pendingCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case pendingCount
+    }
+}
+
 // MARK: - API 错误
 
 struct APIError: Decodable, Error {
@@ -87,6 +123,34 @@ final class OBAPIClient {
         return try await get(path: "/users/me", token: token)
     }
 
+    // MARK: - GET /users/me/posts
+
+    func getMyPosts(token: String) async throws -> MyPostsResponse {
+        let response: DataResponse<MyPostsResponse> = try await get(path: "/users/me/posts", token: token)
+        return response.data
+    }
+
+    // MARK: - PATCH /posts/{postId}/review
+
+    func reviewPost(postId: String, action: String, token: String) async throws {
+        let body = ReviewPostRequest(action: action)
+        try await requestVoid(path: "/posts/\(postId)/review", method: "PATCH", body: body, token: token)
+    }
+
+    // MARK: - GET /users/me/badge
+
+    func getPendingCount(token: String) async throws -> PendingCountResponse {
+        let response: DataResponse<PendingCountResponse> = try await get(path: "/users/me/badge", token: token)
+        return response.data
+    }
+
+    // MARK: - PUT /users/me/device-token
+
+    func registerDeviceToken(deviceToken: String, token: String) async throws {
+        let body = RegisterDeviceTokenRequest(deviceToken: deviceToken, platform: "ios")
+        try await requestVoid(path: "/users/me/device-token", method: "PUT", body: body, token: token)
+    }
+
     // MARK: - 内部通用方法
 
     private func post<T: Decodable>(
@@ -102,6 +166,18 @@ final class OBAPIClient {
     private func get<T: Decodable>(path: String, token: String) async throws -> T {
         let request = makeRequest(path: path, method: "GET", token: token)
         return try await execute(request)
+    }
+
+    private func requestVoid(path: String, method: String, body: Encodable?, token: String?) async throws {
+        var request = makeRequest(path: path, method: method, token: token)
+        if let body {
+            request.httpBody = try? JSONEncoder().encode(AnyEncodable(body))
+        }
+        let (_, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(statusCode) else {
+            throw APIError(statusCode: statusCode, errorCode: "REQUEST_FAILED", message: "请求失败")
+        }
     }
 
     private func makeRequest(path: String, method: String, token: String?) -> URLRequest {
@@ -130,5 +206,80 @@ final class OBAPIClient {
             }
             throw APIError(statusCode: statusCode, errorCode: "UNKNOWN", message: "请求失败")
         }
+    }
+}
+
+private struct DataResponse<T: Decodable>: Decodable {
+    let data: T
+}
+
+private struct ReviewPostRequest: Encodable {
+    let action: String
+}
+
+private struct RegisterDeviceTokenRequest: Encodable {
+    let deviceToken: String
+    let platform: String
+}
+
+private struct AnyEncodable: Encodable {
+    private let encoder: (Encoder) throws -> Void
+
+    init(_ wrapped: Encodable) {
+        self.encoder = wrapped.encode(to:)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        try self.encoder(encoder)
+    }
+}
+
+struct PresignData: Decodable {
+    let uploadUrl: String
+    let imageUrl: String
+    let expiresIn: Int
+}
+
+private struct PresignRequest: Encodable {
+    let fileName: String
+    let contentType: String
+}
+
+private struct CreatePostRequest: Encodable {
+    let imageUrl: String
+    let subjectUid: String
+}
+
+extension OBAPIClient {
+
+    func presign(fileName: String, contentType: String, token: String) async throws -> PresignData {
+        let body = PresignRequest(fileName: fileName, contentType: contentType)
+        var request = makeRequest(path: "/upload/presign", method: "POST", token: token)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let response: DataResponse<PresignData> = try await execute(request)
+        return response.data
+    }
+
+    func putToR2(uploadUrl: String, imageData: Data) async throws {
+        guard let url = URL(string: uploadUrl) else {
+            throw APIError(statusCode: 0, errorCode: "INVALID_URL", message: "上传地址无效")
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = imageData
+
+        let (_, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(statusCode) else {
+            throw APIError(statusCode: statusCode, errorCode: "UPLOAD_FAILED", message: "图片上传失败")
+        }
+    }
+
+    func createPost(imageUrl: String, subjectUid: String, token: String) async throws {
+        let body = CreatePostRequest(imageUrl: imageUrl, subjectUid: subjectUid)
+        try await requestVoid(path: "/posts", method: "POST", body: body, token: token)
     }
 }

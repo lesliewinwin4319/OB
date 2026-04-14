@@ -70,8 +70,9 @@ struct HomeView: View {
                         hashableImage: hashableImage,
                         navigationPath: $navigationPath
                     )
-                case .uploadSelection:
+                case .uploadSelection(let hashableImage):
                     UploadSelectionView(
+                        hashableImage: hashableImage,
                         navigationPath: $navigationPath
                     )
                 }

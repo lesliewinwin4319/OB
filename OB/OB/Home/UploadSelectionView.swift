@@ -16,18 +16,25 @@ import SwiftUI
 /// 5. 底部"申请"按钮
 struct UploadSelectionView: View {
 
+    let hashableImage: HashableImage
     @Binding var navigationPath: NavigationPath
 
     @State private var selectedFriends: [Friend] = []
     @State private var friends: [Friend] = MockData.friends
-    @State private var isSubmitting: Bool = false
+    @StateObject private var viewModel: UploadViewModel
 
     /// 放弃二次确认弹窗
     @State private var showDiscardAlert = false
 
     /// 申请按钮是否可用
     private var canSubmit: Bool {
-        !selectedFriends.isEmpty && !isSubmitting
+        !selectedFriends.isEmpty && !viewModel.isSubmitting
+    }
+
+    init(hashableImage: HashableImage, navigationPath: Binding<NavigationPath>) {
+        self.hashableImage = hashableImage
+        self._navigationPath = navigationPath
+        self._viewModel = StateObject(wrappedValue: UploadViewModel(hashableImage: hashableImage))
     }
 
     var body: some View {
@@ -123,9 +130,14 @@ struct UploadSelectionView: View {
                 Spacer()
 
                 // MARK: 底部申请按钮
-                Button(action: handleSubmit) {
+                Button(action: {
+                    guard let selectedFriend = selectedFriends.first else { return }
+                    Task {
+                        await viewModel.submit(friend: selectedFriend, navigationPath: $navigationPath)
+                    }
+                }) {
                     Group {
-                        if isSubmitting {
+                        if viewModel.isSubmitting {
                             ProgressView()
                                 .tint(.white)
                         } else {
@@ -151,30 +163,6 @@ struct UploadSelectionView: View {
             Button("否", role: .cancel) {}
             Button("是", role: .destructive) {
                 navigationPath = NavigationPath()
-            }
-        }
-    }
-
-    // MARK: - 提交处理
-
-    private func handleSubmit() {
-        guard let selectedFriend = selectedFriends.first else { return }
-        guard !isSubmitting else { return }
-
-        isSubmitting = true
-
-        Task {
-            let success = await MockData.submitRequest(friendID: selectedFriend.id)
-
-            isSubmitting = false
-
-            if success {
-                // Pop to Root 并 Toast
-                navigationPath = NavigationPath()
-                ToastManager.shared.show("已提交！对方同意后展示在朋友圈")
-            } else {
-                // 断网/失败
-                ToastManager.shared.show("网络不佳，请稍后重试")
             }
         }
     }

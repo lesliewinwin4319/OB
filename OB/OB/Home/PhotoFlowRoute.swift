@@ -11,7 +11,7 @@ import SwiftUI
 /// 用于 NavigationPath 的类型安全路由
 enum PhotoFlowRoute: Hashable {
     case confirmation(HashableImage)   // 拍照确认页，携带原图
-    case uploadSelection               // 上传选择页
+    case uploadSelection(HashableImage) // 上传选择页，携带原图
 }
 
 // MARK: - HashableImage
