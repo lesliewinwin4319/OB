@@ -6,8 +6,6 @@ import { UsersModule } from './users/users.module';
 import { WechatModule } from './wechat/wechat.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseConfig } from './config/database.config';
-import { PostsModule } from './posts/posts.module';
-import { ApnsModule } from './apns/apns.module';
 import { UploadModule } from './upload/upload.module';
 
 @Module({
@@ -25,8 +23,6 @@ import { UploadModule } from './upload/upload.module';
     AuthModule,
     UsersModule,
     HealthModule,
-    PostsModule,
-    ApnsModule,
     UploadModule,
   ],
 })
